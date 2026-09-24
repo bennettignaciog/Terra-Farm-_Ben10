@@ -1,0 +1,6 @@
+{
+  "name": "TerraFarm: Agro-Ecological Simulator",
+  "description": "A browser-based sustainable farm simulation game teaching agro-ecological principles through interactive consequences and soil biology.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
