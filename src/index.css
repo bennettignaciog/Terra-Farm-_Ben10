@@ -96,3 +96,52 @@
   color: #e3e3e3;
 }
 
+/* Water Table Cross Section Hydro-Geological Animations */
+@keyframes waterWaveFlow {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-40px); }
+  100% { transform: translateX(0); }
+}
+
+@keyframes waterPercolate {
+  0% { transform: translateY(-4px); opacity: 0; }
+  25% { opacity: 0.85; }
+  75% { opacity: 0.85; }
+  100% { transform: translateY(32px); opacity: 0; }
+}
+
+@keyframes borewellSuction {
+  0% { transform: translateY(28px); opacity: 0.2; }
+  50% { opacity: 0.9; }
+  100% { transform: translateY(-24px); opacity: 0; }
+}
+
+@keyframes waterHorizonGlow {
+  0%, 100% { opacity: 0.75; }
+  50% { opacity: 1; }
+}
+
+.animate-water-wave {
+  animation: waterWaveFlow 6s ease-in-out infinite;
+}
+
+.animate-percolate-fast {
+  animation: waterPercolate 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-percolate-med {
+  animation: waterPercolate 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite 0.6s;
+}
+
+.animate-percolate-slow {
+  animation: waterPercolate 3.0s cubic-bezier(0.4, 0, 0.6, 1) infinite 1.2s;
+}
+
+.animate-borewell-suction {
+  animation: borewellSuction 1.4s linear infinite;
+}
+
+.animate-horizon-glow {
+  animation: waterHorizonGlow 2.5s ease-in-out infinite;
+}
+

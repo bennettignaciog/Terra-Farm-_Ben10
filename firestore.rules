@@ -1,0 +1,134 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.matches('^[a-zA-Z0-9_\\-]+$') && id.size() > 0 && id.size() <= 128;
+    }
+
+    function isValidUserProfile(data, userId) {
+      return data.keys().hasAll(['id', 'displayName']) &&
+        data.keys().hasOnly(['id', 'displayName', 'email', 'createdAt', 'updatedAt', 'totalEcoPoints', 'farmCount']) &&
+        data.id == userId &&
+        data.displayName is string &&
+        data.displayName.size() > 0 &&
+        data.displayName.size() <= 50 &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 100)) &&
+        (!('totalEcoPoints' in data) || (data.totalEcoPoints is number && data.totalEcoPoints >= 0)) &&
+        (!('farmCount' in data) || (data.farmCount is number && data.farmCount >= 0));
+    }
+
+    function isValidFarmSave(data, userId) {
+      return data.keys().hasAll(['id', 'userId', 'farmName', 'farmDataJson', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'userId', 'farmName', 'climateZone', 'day', 'season', 'year', 'cash', 'ecoPoints', 'biodiversityScore', 'soilHealthAverage', 'farmDataJson', 'createdAt', 'updatedAt']) &&
+        data.userId == userId &&
+        data.id is string &&
+        data.id.size() > 0 &&
+        data.id.size() <= 128 &&
+        data.farmName is string &&
+        data.farmName.size() > 0 &&
+        data.farmName.size() <= 60 &&
+        data.farmDataJson is string &&
+        data.farmDataJson.size() > 0 &&
+        data.farmDataJson.size() <= 1000000 &&
+        (!('cash' in data) || data.cash is number) &&
+        (!('ecoPoints' in data) || data.ecoPoints is number) &&
+        (!('biodiversityScore' in data) || (data.biodiversityScore is number && data.biodiversityScore >= 0 && data.biodiversityScore <= 100)) &&
+        (!('soilHealthAverage' in data) || (data.soilHealthAverage is number && data.soilHealthAverage >= 0 && data.soilHealthAverage <= 100));
+    }
+
+    function isValidLeaderboardEntry(data) {
+      return data.keys().hasAll(['id', 'userId', 'farmerName', 'farmName', 'ecoPoints', 'biodiversityScore']) &&
+        data.keys().hasOnly(['id', 'userId', 'farmerName', 'farmName', 'ecoPoints', 'biodiversityScore', 'soilHealthAverage', 'year', 'seasonName', 'climateZone', 'updatedAt']) &&
+        data.userId == request.auth.uid &&
+        data.id is string &&
+        data.id.size() > 0 &&
+        data.id.size() <= 128 &&
+        data.farmerName is string &&
+        data.farmerName.size() > 0 &&
+        data.farmerName.size() <= 50 &&
+        data.farmName is string &&
+        data.farmName.size() > 0 &&
+        data.farmName.size() <= 60 &&
+        data.ecoPoints is number &&
+        data.biodiversityScore is number &&
+        data.biodiversityScore >= 0 &&
+        data.biodiversityScore <= 100;
+    }
+
+    function isValidCommunityNote(data) {
+      return data.keys().hasAll(['id', 'userId', 'authorName', 'category', 'title', 'content']) &&
+        data.keys().hasOnly(['id', 'userId', 'authorName', 'category', 'title', 'content', 'likes', 'createdAt']) &&
+        data.userId == request.auth.uid &&
+        data.id is string &&
+        data.id.size() > 0 &&
+        data.id.size() <= 128 &&
+        data.authorName is string &&
+        data.authorName.size() > 0 &&
+        data.authorName.size() <= 50 &&
+        data.category is string &&
+        data.category.size() > 0 &&
+        data.category.size() <= 30 &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() <= 100 &&
+        data.content is string &&
+        data.content.size() > 0 &&
+        data.content.size() <= 1000 &&
+        (!('likes' in data) || (data.likes is number && data.likes >= 0));
+    }
+
+    // User profile collection
+    match /users/{userId} {
+      allow get: if isAuthenticated();
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(request.resource.data, userId);
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(request.resource.data, userId) &&
+        request.resource.data.id == resource.data.id;
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Subcollection for user's farm saves
+      match /farmSaves/{saveId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(saveId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(saveId) && isValidFarmSave(request.resource.data, userId);
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(saveId) && isValidFarmSave(request.resource.data, userId) &&
+          request.resource.data.id == resource.data.id &&
+          request.resource.data.userId == resource.data.userId;
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(saveId);
+      }
+    }
+
+    // Global community leaderboard entries
+    match /leaderboard/{entryId} {
+      allow get: if isValidId(entryId);
+      allow list: if true;
+      allow create: if isAuthenticated() && isValidId(entryId) && isValidLeaderboardEntry(request.resource.data);
+      allow update: if isAuthenticated() && isValidId(entryId) && resource.data.userId == request.auth.uid &&
+        isValidLeaderboardEntry(request.resource.data) &&
+        request.resource.data.userId == resource.data.userId &&
+        request.resource.data.id == resource.data.id;
+      allow delete: if isAuthenticated() && isValidId(entryId) && resource.data.userId == request.auth.uid;
+    }
+
+    // Global community field notes
+    match /communityNotes/{noteId} {
+      allow get: if isValidId(noteId);
+      allow list: if true;
+      allow create: if isAuthenticated() && isValidId(noteId) && isValidCommunityNote(request.resource.data);
+      allow update: if isAuthenticated() && isValidId(noteId) && (
+        (resource.data.userId == request.auth.uid && isValidCommunityNote(request.resource.data) && request.resource.data.userId == resource.data.userId) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes']) && request.resource.data.likes == resource.data.likes + 1)
+      );
+      allow delete: if isAuthenticated() && isValidId(noteId) && resource.data.userId == request.auth.uid;
+    }
+  }
+}

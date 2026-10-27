@@ -80,7 +80,7 @@ export const ActionBar: React.FC = () => {
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin scrollbar-thumb-stone-700">
         <button
           onClick={() => selectCategory('plant')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'plant' 
               ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-950/50' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -92,7 +92,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => selectCategory('irrigate')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'irrigate' 
               ? 'bg-sky-600 text-white border-sky-500 shadow-md shadow-sky-950/50' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -104,7 +104,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => selectCategory('fertilize')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'fertilize' 
               ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-950/50' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -116,7 +116,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => selectCategory('pest_control')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'pest_control' 
               ? 'bg-rose-600 text-white border-rose-500 shadow-md shadow-rose-950/50' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -128,7 +128,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => selectCategory('residue')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'residue' 
               ? 'bg-orange-700 text-white border-orange-600 shadow-md shadow-orange-950/50' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -140,7 +140,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => selectCategory('harvest')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'harvest' 
               ? 'bg-yellow-600 text-stone-950 border-yellow-500 font-bold shadow-md shadow-yellow-950/50' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -152,7 +152,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => selectCategory('inspect')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
+          className={`h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap transition-all border ${
             activeCategory === 'inspect' 
               ? 'bg-stone-700 text-white border-stone-500 shadow-md' 
               : 'bg-stone-900/90 text-stone-300 border-stone-800 hover:bg-stone-850 hover:text-stone-100'
@@ -167,7 +167,7 @@ export const ActionBar: React.FC = () => {
         {/* Upgrades & Neighbors Buttons */}
         <button
           onClick={() => openModal('upgrades')}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-stone-900 hover:bg-stone-800 text-emerald-300 border border-emerald-500/40 hover:border-emerald-500/70 transition-all shadow-sm"
+          className="h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap bg-stone-900 hover:bg-stone-850 text-emerald-300 border border-emerald-500/40 hover:border-emerald-500/70 transition-all shadow-sm"
         >
           <Wrench className="w-3.5 h-3.5 text-emerald-400" />
           <span>{t.upgrades}</span>
@@ -175,7 +175,7 @@ export const ActionBar: React.FC = () => {
 
         <button
           onClick={() => openModal('neighbors')}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap bg-stone-900 hover:bg-stone-800 text-amber-300 border border-amber-500/40 hover:border-amber-500/70 transition-all shadow-sm"
+          className="h-8 flex items-center gap-1.5 px-3 rounded-lg text-xs font-semibold whitespace-nowrap bg-stone-900 hover:bg-stone-850 text-amber-300 border border-amber-500/40 hover:border-amber-500/70 transition-all shadow-sm"
         >
           <Users className="w-3.5 h-3.5 text-amber-400" />
           <span>{t.neighbors}</span>

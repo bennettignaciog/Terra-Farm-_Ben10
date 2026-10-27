@@ -1,0 +1,224 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public and private profile stats of the agroecological farmer",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Auth UID of the farmer"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Farmer display name",
+          "maxLength": 50
+        },
+        "email": {
+          "type": "string",
+          "description": "Optional email"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp updated"
+        },
+        "totalEcoPoints": {
+          "type": "number",
+          "description": "Total lifetime eco points accumulated"
+        },
+        "farmCount": {
+          "type": "number",
+          "description": "Total saves created"
+        }
+      },
+      "required": ["id", "displayName"]
+    },
+    "FarmSave": {
+      "title": "FarmSave",
+      "description": "Full persistent snapshot of player's agroecological farm",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Save identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner Auth UID"
+        },
+        "farmName": {
+          "type": "string",
+          "description": "Name of the farm",
+          "maxLength": 60
+        },
+        "climateZone": {
+          "type": "string",
+          "description": "Active climate zone ID"
+        },
+        "day": {
+          "type": "number",
+          "description": "Current day of season"
+        },
+        "season": {
+          "type": "number",
+          "description": "Current season index (0-3)"
+        },
+        "year": {
+          "type": "number",
+          "description": "Current year"
+        },
+        "cash": {
+          "type": "number",
+          "description": "Current farm cash reserve"
+        },
+        "ecoPoints": {
+          "type": "number",
+          "description": "Current eco points"
+        },
+        "biodiversityScore": {
+          "type": "number",
+          "description": "Biodiversity index percentage"
+        },
+        "soilHealthAverage": {
+          "type": "number",
+          "description": "Average soil quality across plots"
+        },
+        "farmDataJson": {
+          "type": "string",
+          "description": "Serialized FarmState JSON payload"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "farmName", "farmDataJson", "createdAt", "updatedAt"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public high-score record for top regenerative farms",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Record unique ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Author UID"
+        },
+        "farmerName": {
+          "type": "string",
+          "description": "Display name of farmer",
+          "maxLength": 50
+        },
+        "farmName": {
+          "type": "string",
+          "description": "Farm name",
+          "maxLength": 60
+        },
+        "ecoPoints": {
+          "type": "number",
+          "description": "Eco points scored"
+        },
+        "biodiversityScore": {
+          "type": "number",
+          "description": "Biodiversity score"
+        },
+        "soilHealthAverage": {
+          "type": "number",
+          "description": "Soil health percentage"
+        },
+        "year": {
+          "type": "number",
+          "description": "Farm year achieved"
+        },
+        "seasonName": {
+          "type": "string",
+          "description": "Season reached"
+        },
+        "climateZone": {
+          "type": "string",
+          "description": "Climate zone"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "farmerName", "farmName", "ecoPoints", "biodiversityScore"]
+    },
+    "CommunityFieldNote": {
+      "title": "CommunityFieldNote",
+      "description": "Agroecological advice or observation shared with the global community",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Field note identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Author UID"
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Author display name",
+          "maxLength": 50
+        },
+        "category": {
+          "type": "string",
+          "description": "Soil, Pest, Water, Companion, or General",
+          "maxLength": 30
+        },
+        "title": {
+          "type": "string",
+          "description": "Note title",
+          "maxLength": 100
+        },
+        "content": {
+          "type": "string",
+          "description": "Field note body text",
+          "maxLength": 1000
+        },
+        "likes": {
+          "type": "number",
+          "description": "Community upvote count"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "userId", "authorName", "category", "title", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile records containing farmer credentials and lifetime totals"
+    },
+    "/users/{userId}/farmSaves/{saveId}": {
+      "schema": "FarmSave",
+      "description": "User-specific cloud saves for farm simulation states"
+    },
+    "/leaderboard/{entryId}": {
+      "schema": "LeaderboardEntry",
+      "description": "Global leaderboard entries celebrating top ecological farming achievements"
+    },
+    "/communityNotes/{noteId}": {
+      "schema": "CommunityFieldNote",
+      "description": "Agroecological knowledge base shared by community farmers"
+    }
+  }
+}

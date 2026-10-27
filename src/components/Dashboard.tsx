@@ -37,7 +37,10 @@ import {
   HelpCircle,
   Check,
   ChevronRight,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Maximize2,
+  Minimize2,
+  Database
 } from 'lucide-react';
 
 const LANGUAGE_OPTIONS: { code: Language; label: string; native: string; flag: string }[] = [
@@ -132,16 +135,37 @@ export const Dashboard: React.FC = () => {
   const [showTrendsChart, setShowTrendsChart] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [menuTab, setMenuTab] = useState<'all' | 'intelligence' | 'operations' | 'community'>('all');
   const menuRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close menus on click outside or Escape key
+  // Fullscreen state listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  };
+
+  // Close menus on click outside or Escape key, and 'F' for fullscreen
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'Escape') {
         setIsMenuOpen(false);
         setIsLangMenuOpen(false);
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
       }
     };
 
@@ -230,7 +254,7 @@ export const Dashboard: React.FC = () => {
 
   return (
     <header className="w-full bg-stone-900/90 backdrop-blur-md border-b border-stone-800/90 text-stone-100 px-3.5 sm:px-5 py-2.5 shadow-xl sticky top-0 z-30">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
+      <div className="max-w-7xl 2xl:max-w-[1680px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
         {/* Left Side: Consolidated Modules Menu Button at Left Corner, Brand, Calendar & Weather */}
         <div className="flex items-center justify-between w-full lg:w-auto gap-3">
           <div className="flex items-center gap-2.5">
@@ -804,6 +828,40 @@ export const Dashboard: React.FC = () => {
                         </div>
                       </button>
                     )}
+
+                    {/* 13. Cloud Database & Farm Saves */}
+                    <button
+                      onClick={() => {
+                        openModal('database');
+                        setIsMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-between p-2.5 rounded-xl bg-gradient-to-r from-cyan-950/50 via-stone-900 to-stone-900/90 hover:from-cyan-900/60 hover:via-stone-850 hover:to-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 transition-all text-left group shadow-sm hover:shadow-cyan-950/40"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/40 flex items-center justify-center text-cyan-400 group-hover:scale-110 group-hover:rotate-3 transition-transform shrink-0">
+                          <Database className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-stone-100 group-hover:text-cyan-300 transition-colors">
+                              Cloud Database & Farm Saves
+                            </span>
+                            <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-full bg-cyan-900 text-cyan-200 border border-cyan-700 font-bold uppercase">
+                              FIRESTORE
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-stone-400 group-hover:text-stone-300 transition-colors line-clamp-1">
+                            Save farm snapshots, restore states, global rankings & community notes
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-950/90 text-cyan-300 border border-cyan-600/50">
+                          ● Connected
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-stone-500 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </button>
                   </div>
 
                   {/* Menu Footer */}
@@ -820,6 +878,19 @@ export const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Quick Access Cloud Database Button */}
+            <button
+              onClick={() => openModal('database')}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-950/60 to-cyan-950/50 border border-cyan-500/40 hover:border-cyan-400 text-stone-200 hover:text-white transition-all shadow-sm active:scale-95 group"
+              title="Cloud Database: Firestore farm saves, live sync & community knowledge"
+            >
+              <Database className="w-3.5 h-3.5 text-cyan-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline font-mono text-xs font-bold text-cyan-300">
+                Cloud DB
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </button>
 
             {/* Quick Access Watershed Standings & Points Button */}
             <button
@@ -920,48 +991,48 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Side: Simulation Time & Speed Controls, Audio & Language */}
-        <div className="flex items-center gap-2 w-full lg:w-auto justify-end flex-wrap sm:flex-nowrap">
+        {/* Right Side: Simulation Time & Speed Controls, Feature Buttons, Audio, Fullscreen & Language */}
+        <div className="flex items-center gap-1.5 w-full lg:w-auto justify-end flex-wrap sm:flex-nowrap">
           {/* Time & Speed Controls */}
-          <div className="flex items-center gap-1 bg-stone-950/90 p-1 rounded-xl border border-stone-800 shadow-inner">
+          <div className="h-8 flex items-center gap-0.5 bg-stone-950/90 px-1 rounded-lg border border-stone-800 shadow-inner">
             <button
               onClick={togglePause}
-              className={`p-1.5 rounded-lg transition-all ${
+              className={`h-6.5 w-6.5 rounded-md transition-all inline-flex items-center justify-center ${
                 farm.isPaused 
                   ? 'bg-amber-600 text-white shadow-sm' 
-                  : 'hover:bg-stone-800 text-stone-300 active:scale-95'
+                  : 'hover:bg-stone-850 text-stone-300 active:scale-95'
               }`}
-              title={farm.isPaused ? 'Resume Simulation' : 'Pause Simulation'}
+              title={farm.isPaused ? 'Resume Simulation (Space)' : 'Pause Simulation (Space)'}
             >
               {farm.isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5 fill-current" />}
             </button>
 
             <button
               onClick={() => setGameSpeed(1)}
-              className={`px-2.5 py-1 text-xs font-mono rounded-lg transition-all ${
+              className={`h-6.5 px-2 text-xs font-mono rounded-md transition-all inline-flex items-center justify-center ${
                 farm.gameSpeed === 1 && !farm.isPaused 
                   ? 'bg-emerald-600 text-white font-bold shadow-sm' 
-                  : 'hover:bg-stone-800 text-stone-400 active:scale-95'
+                  : 'hover:bg-stone-850 text-stone-400 active:scale-95'
               }`}
             >
               1x
             </button>
             <button
               onClick={() => setGameSpeed(2)}
-              className={`px-2.5 py-1 text-xs font-mono rounded-lg transition-all ${
+              className={`h-6.5 px-2 text-xs font-mono rounded-md transition-all inline-flex items-center justify-center ${
                 farm.gameSpeed === 2 && !farm.isPaused 
                   ? 'bg-emerald-600 text-white font-bold shadow-sm' 
-                  : 'hover:bg-stone-800 text-stone-400 active:scale-95'
+                  : 'hover:bg-stone-850 text-stone-400 active:scale-95'
               }`}
             >
               2x
             </button>
             <button
               onClick={() => setGameSpeed(5)}
-              className={`px-2.5 py-1 text-xs font-mono rounded-lg transition-all ${
+              className={`h-6.5 px-2 text-xs font-mono rounded-md transition-all inline-flex items-center justify-center ${
                 farm.gameSpeed === 5 && !farm.isPaused 
                   ? 'bg-emerald-600 text-white font-bold shadow-sm' 
-                  : 'hover:bg-stone-800 text-stone-400 active:scale-95'
+                  : 'hover:bg-stone-850 text-stone-400 active:scale-95'
               }`}
             >
               5x
@@ -969,11 +1040,11 @@ export const Dashboard: React.FC = () => {
 
             <button
               onClick={advanceSeason}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-stone-800/90 hover:bg-stone-700 text-amber-200 border border-stone-700/60 transition-all active:scale-95 shadow-sm"
+              className="h-6.5 flex items-center gap-1 px-2 text-xs font-semibold rounded-md bg-stone-800/90 hover:bg-stone-750 text-amber-200 border border-stone-700/60 transition-all active:scale-95 shadow-sm"
               title="Fast forward to harvest & season report"
             >
-              <FastForward className="w-3.5 h-3.5 text-amber-400" />
-              <span className="hidden sm:inline">Next Season</span>
+              <FastForward className="w-3 h-3 text-amber-400" />
+              <span className="hidden sm:inline">Next</span>
             </button>
           </div>
 
@@ -981,7 +1052,7 @@ export const Dashboard: React.FC = () => {
           {farm.hasOrganicCertification ? (
             <div 
               onClick={() => openModal('contracts')}
-              className="cursor-pointer bg-emerald-950 border border-emerald-500/50 text-emerald-300 text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1.5 hover:bg-emerald-900 transition-colors shadow-sm"
+              className="cursor-pointer h-8 bg-emerald-950 border border-emerald-500/50 text-emerald-300 text-xs font-semibold px-2.5 rounded-lg inline-flex items-center gap-1.5 hover:bg-emerald-900 transition-colors shadow-sm shrink-0"
               title="Certified Organic: +50% Market Premium"
             >
               <Award className="w-3.5 h-3.5 text-emerald-400" />
@@ -990,10 +1061,10 @@ export const Dashboard: React.FC = () => {
           ) : (
             <div 
               onClick={() => openModal('contracts')}
-              className="cursor-pointer bg-stone-950 border border-stone-800 text-stone-400 text-[11px] px-2 py-1 rounded-lg flex items-center gap-1.5 hover:text-stone-200 hover:bg-stone-900 transition-colors"
+              className="cursor-pointer h-8 bg-stone-950 border border-stone-800 text-stone-400 text-xs px-2.5 rounded-lg inline-flex items-center gap-1.5 hover:text-stone-200 hover:bg-stone-900 transition-colors shrink-0"
               title="Chemical-Free Seasons Progress toward Organic Certification"
             >
-              <span className="hidden sm:inline">Chem-Free:</span>
+              <span className="hidden sm:inline text-stone-500">Chem-Free:</span>
               <span className="font-mono text-stone-300">{farm.consecutiveChemicalFreeSeasons}/3</span>
             </div>
           )}
@@ -1001,9 +1072,9 @@ export const Dashboard: React.FC = () => {
           {/* Top-Right Farm Scenery & Backgrounds Button */}
           <button
             onClick={() => openModal('background')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all active:scale-95 shadow-sm group ${
+            className={`h-8 inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-lg border transition-all active:scale-95 shadow-sm shrink-0 group ${
               backgroundSettings.enabled
-                ? 'bg-stone-900 border-stone-700/80 hover:border-emerald-500 text-stone-200 hover:text-white hover:bg-stone-850'
+                ? 'bg-stone-900 border-stone-750 hover:border-emerald-500 text-stone-200 hover:text-white hover:bg-stone-850'
                 : 'bg-stone-950 border-stone-800 text-stone-400 hover:text-stone-300'
             }`}
             title="Farm Landscape Scenery & Background Image Options"
@@ -1020,31 +1091,54 @@ export const Dashboard: React.FC = () => {
           {/* Top-Right Game Guide / Feature Almanac Button */}
           <button
             onClick={() => openModal('guide')}
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-950 border border-emerald-500/60 hover:border-emerald-400 text-emerald-300 hover:text-emerald-200 transition-all active:scale-95 shadow-sm hover:bg-emerald-900 group"
+            className="h-8 inline-flex items-center gap-1.5 px-2.5 text-xs font-semibold rounded-lg bg-emerald-950 border border-emerald-500/60 hover:border-emerald-400 text-emerald-300 hover:text-emerald-200 transition-all active:scale-95 shadow-sm hover:bg-emerald-900 shrink-0 group"
             title="Game Guide & Almanac: Complete explanation of every feature, tool, and mechanic in TerraFarm"
           >
             <HelpCircle className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-            <span className="font-bold">Game Guide</span>
-            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-emerald-800 text-emerald-200 hidden sm:inline">?</span>
+            <span className="font-bold hidden sm:inline">Guide</span>
+            <span className="text-[10px] font-mono px-1 py-0.2 rounded bg-emerald-800 text-emerald-200 sm:hidden">?</span>
           </button>
 
           {/* Audio toggle */}
           <button
             onClick={toggleSound}
-            className="p-1.5 rounded-lg bg-stone-950 border border-stone-800 hover:bg-stone-800 text-stone-400 hover:text-stone-200 transition-colors"
+            className="h-8 w-8 rounded-lg bg-stone-950 border border-stone-800 hover:bg-stone-850 text-stone-400 hover:text-stone-200 inline-flex items-center justify-center transition-colors active:scale-95 shrink-0"
             title={soundEnabled ? 'Mute Sound' : 'Unmute Sound'}
           >
             {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
           </button>
 
+          {/* Fullscreen Mode Toggle Button */}
+          <button
+            onClick={toggleFullscreen}
+            className={`h-8 px-2.5 rounded-lg border transition-all inline-flex items-center gap-1.5 text-xs font-semibold active:scale-95 shadow-sm shrink-0 group ${
+              isFullscreen
+                ? 'bg-emerald-950/80 border-emerald-500 text-emerald-300'
+                : 'bg-stone-950 border-stone-800 hover:border-stone-700 hover:bg-stone-850 text-stone-300 hover:text-white'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen (Hotkey: F)' : 'Fullscreen View (Hotkey: F)'}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden xl:inline">Exit Full</span>
+              </>
+            ) : (
+              <>
+                <Maximize2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden xl:inline">Full</span>
+              </>
+            )}
+          </button>
+
           {/* Language Selector Dropdown (Single Icon) */}
-          <div className="relative" ref={langMenuRef}>
+          <div className="relative shrink-0" ref={langMenuRef}>
             <button
               onClick={() => setIsLangMenuOpen(!isLangMenuOpen)}
-              className={`px-2 py-1.5 rounded-lg border transition-all flex items-center gap-1.5 ${
+              className={`h-8 px-2 rounded-lg border transition-all inline-flex items-center gap-1.5 ${
                 isLangMenuOpen
                   ? 'bg-emerald-950 border-emerald-500 text-emerald-300 shadow-sm'
-                  : 'bg-stone-950 border-stone-800 hover:bg-stone-800 text-stone-300 hover:text-white'
+                  : 'bg-stone-950 border-stone-800 hover:bg-stone-850 text-stone-300 hover:text-white'
               }`}
               title="Select Language"
               aria-label="Select language"
@@ -1109,7 +1203,7 @@ export const Dashboard: React.FC = () => {
           {/* Topmost Right Corner: Agricultural Science Quiz & Rewards */}
           <button
             onClick={() => openModal('quiz')}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-950/60 border border-emerald-400/60 hover:border-emerald-300 transition-all active:scale-95 group shrink-0"
+            className="h-8 inline-flex items-center gap-1.5 px-3 text-xs font-bold rounded-lg bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-950/60 border border-emerald-400/60 hover:border-emerald-300 transition-all active:scale-95 group shrink-0"
             title="Agricultural Science Quizzes & Research Grants: Test your knowledge to win Cash Grants & EcoPoints!"
           >
             <span className="text-sm group-hover:scale-110 group-hover:rotate-12 transition-transform">🌾</span>

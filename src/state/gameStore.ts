@@ -32,7 +32,7 @@ import {
   QuizStreakReward 
 } from '../config/quizzes';
 
-export type ModalType = null | 'report' | 'upgrades' | 'neighbors' | 'contracts' | 'zones' | 'gmail' | 'academy' | 'eco_impact' | 'climate' | 'field_notes' | 'leaderboard' | 'guide' | 'background' | 'quiz';
+export type ModalType = null | 'report' | 'upgrades' | 'neighbors' | 'contracts' | 'zones' | 'gmail' | 'academy' | 'eco_impact' | 'climate' | 'field_notes' | 'leaderboard' | 'guide' | 'background' | 'quiz' | 'database';
 
 export interface HarvestLootEvent {
   id: string;
@@ -101,6 +101,7 @@ interface GameStore {
   };
   resetQuizProgress: () => void;
   claimStreakReward: (streak: number) => boolean;
+  loadCloudFarmState: (farm: FarmState, climateZone?: string) => void;
 }
 
 const STORAGE_KEY = 'terrafarm_save_v1';
@@ -777,5 +778,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     sound.playQuizStreak();
     get().showNotification(`Claimed ${reward.title}: +$${reward.cashBonus} & +${reward.ecoPointsBonus} EcoPoints!`, 'success');
     return true;
+  },
+
+  loadCloudFarmState: (farm: FarmState, climateZone?: string) => {
+    set({
+      farm,
+      ...(climateZone ? { activeClimateZone: climateZone } : {})
+    });
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(farm));
+    } catch (e) {
+      console.error(e);
+    }
+    get().showNotification('Farm restored from Cloud Database!', 'success');
   }
 }));

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useGameStore } from './state/gameStore';
 import { Dashboard } from './components/Dashboard';
 import { FarmCanvas } from './canvas/FarmCanvas';
@@ -18,6 +18,7 @@ import { LeaderboardAndBadgesModal } from './components/LeaderboardAndBadgesModa
 import { GameGuideModal } from './components/GameGuideModal';
 import { BackgroundOptionsModal } from './components/BackgroundOptionsModal';
 import { AgroQuizModal } from './components/AgroQuizModal';
+import { CloudDatabaseModal } from './components/CloudDatabaseModal';
 import { getActiveBackgroundImage } from './config/backgroundPresets';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
@@ -43,13 +44,26 @@ export default function App() {
     return () => clearInterval(timer);
   }, [tick, isPaused, gameSpeed]);
 
+  // Fullscreen tracking for responsive layout scaling
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col font-sans selection:bg-emerald-600 selection:text-white">
       {/* Top Bar Dashboard */}
       <Dashboard />
 
       {/* Main Simulation Viewport */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 flex flex-col gap-3">
+      <main className={`flex-1 w-full mx-auto p-3 sm:p-4 flex flex-col gap-3 transition-all ${
+        isFullscreen ? 'max-w-[98vw] 2xl:max-w-[1850px]' : 'max-w-7xl 2xl:max-w-[1680px]'
+      }`}>
         {/* Farm Canvas 6x6 Viewport */}
         <div className="flex-1 flex flex-col">
           <FarmCanvas />
@@ -77,6 +91,7 @@ export default function App() {
       <GameGuideModal />
       <BackgroundOptionsModal />
       <AgroQuizModal />
+      <CloudDatabaseModal />
 
       {/* Global Ambient App Wallpaper */}
       {backgroundSettings.enabled && backgroundSettings.applyToApp && (

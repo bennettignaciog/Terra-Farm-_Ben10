@@ -4,7 +4,7 @@ import { TileState, CropDefinition } from '../simulation/types';
 import { CROPS } from '../config/crops';
 import { WeatherOverlaySystem } from './WeatherOverlaySystem';
 import { getActiveBackgroundImage, BACKGROUND_PRESETS } from '../config/backgroundPresets';
-import { Image as ImageIcon, Sparkles, Eye, Layers, Compass, HelpCircle } from 'lucide-react';
+import { Image as ImageIcon, Sparkles, Eye, Layers, Compass, HelpCircle, Maximize2, Minimize2 } from 'lucide-react';
 import { sound } from '../audio/sound';
 
 interface Particle {
@@ -69,17 +69,38 @@ export const FarmCanvas: React.FC = () => {
   const lootParticlesRef = useRef<LootParticle[]>([]);
   const weatherOverlayRef = useRef<WeatherOverlaySystem>(new WeatherOverlaySystem());
 
-  // Keyboard shortcut: Press 'X' to toggle Soil X-Ray view
+  // Fullscreen tracking and keyboard shortcut 'F'
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }, []);
+
+  // Keyboard shortcut: Press 'X' to toggle Soil X-Ray view, 'F' for fullscreen
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'x' || e.key === 'X') {
         toggleSoilXRayMode();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSoilXRayMode]);
+  }, [toggleSoilXRayMode, toggleFullscreen]);
 
   // Convert incoming store harvest loot events to active animated canvas loot
   useEffect(() => {
@@ -1247,7 +1268,9 @@ export const FarmCanvas: React.FC = () => {
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full h-full min-h-[380px] md:min-h-[480px] flex items-center justify-center overflow-hidden touch-none select-none rounded-xl bg-stone-950 border border-stone-800/90 shadow-2xl"
+      className={`relative w-full flex items-center justify-center overflow-hidden touch-none select-none rounded-xl bg-stone-950 border border-stone-800/90 shadow-2xl transition-all ${
+        isFullscreen ? 'h-[60vh] min-h-[500px]' : 'h-full min-h-[380px] md:min-h-[480px]'
+      }`}
     >
       {/* Scenic Agroecological Field Backdrop Image (only in surface view) */}
       {!soilXRayMode && backgroundSettings.enabled && backgroundSettings.applyToCanvas && activeBgImg && (
@@ -1301,59 +1324,85 @@ export const FarmCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Top Left Toolbar: Soil X-Ray Toggle & Scenery Settings */}
-      <div className="absolute top-2.5 left-3 z-20 flex items-center gap-1.5 flex-wrap">
+      {/* Top Left Toolbar: Soil X-Ray Toggle & Scenery Settings Stacked & Aligned */}
+      <div className="absolute top-2.5 left-3 z-20 flex flex-col items-stretch gap-1.5 min-w-[190px]">
         {/* SOIL X-RAY / SUBTERRANEAN VIEW TOGGLE BUTTON */}
         <button
           onClick={toggleSoilXRayMode}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-lg backdrop-blur-md active:scale-95 border ${
+          className={`h-8 w-full flex items-center justify-between px-3 rounded-lg text-xs font-bold transition-all shadow-lg backdrop-blur-md active:scale-95 border ${
             soilXRayMode
               ? 'bg-purple-600 hover:bg-purple-500 text-white border-purple-400 ring-2 ring-purple-500/50'
-              : 'bg-stone-900/90 hover:bg-stone-850 text-purple-300 hover:text-purple-200 border-purple-500/40 hover:border-purple-400'
+              : 'bg-stone-950/85 hover:bg-stone-900 text-purple-300 hover:text-purple-200 border-purple-500/40 hover:border-purple-400'
           }`}
           title="Toggle Soil X-Ray Mode: View subterranean roots, mycorrhizal fungi & earthworms (Hotkey: X)"
         >
-          <Layers className={`w-3.5 h-3.5 ${soilXRayMode ? 'animate-pulse text-white' : 'text-purple-400'}`} />
-          <span>{soilXRayMode ? '🔬 Soil X-Ray: Active' : '🔬 Soil X-Ray (Press X)'}</span>
+          <div className="flex items-center gap-2">
+            <Layers className={`w-3.5 h-3.5 ${soilXRayMode ? 'animate-pulse text-white' : 'text-purple-400'}`} />
+            <span>{soilXRayMode ? 'Soil X-Ray: On' : 'Soil X-Ray View'}</span>
+          </div>
+          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-200 border border-purple-700/50">
+            X
+          </span>
         </button>
 
-        {/* Scenery Options Button */}
-        {!soilXRayMode && (
-          <>
-            <button
-              onClick={() => openModal('background')}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-stone-900/90 hover:bg-stone-850 text-stone-200 hover:text-white border border-stone-700/80 shadow-md backdrop-blur-md transition-all active:scale-95 group"
-              title="Customize farm scenery and background images"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-              <span className="font-semibold text-stone-300 hidden sm:inline">Scenery:</span>
-              <span className="text-emerald-300 font-bold max-w-[110px] truncate">
+        {/* Scenery Options Button - Stacked directly under Soil X-Ray & Symmetrically Aligned */}
+        <div className="flex items-center gap-1.5 w-full">
+          <button
+            onClick={() => openModal('background')}
+            className="flex-1 h-8 flex items-center justify-between px-3 rounded-lg text-xs font-medium bg-stone-950/85 hover:bg-stone-900 text-stone-200 hover:text-white border border-stone-800 hover:border-emerald-500/50 shadow-md backdrop-blur-md transition-all active:scale-95 group"
+            title="Customize farm scenery and background images"
+          >
+            <div className="flex items-center gap-2 truncate">
+              <ImageIcon className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform shrink-0" />
+              <span className="font-semibold text-stone-300">Scenery:</span>
+              <span className="text-emerald-300 font-bold truncate max-w-[95px]">
                 {backgroundSettings.enabled
                   ? (currentPreset?.name || (backgroundSettings.selectedPresetId === 'custom' ? 'Custom' : 'Active'))
                   : 'Off'}
               </span>
-            </button>
+            </div>
+          </button>
 
-            {backgroundSettings.enabled && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  cycleNextBackground();
-                }}
-                className="p-1.5 rounded-lg bg-stone-900/90 hover:bg-stone-800 text-stone-400 hover:text-emerald-300 border border-stone-700/80 shadow-md backdrop-blur-md transition-all active:scale-95"
-                title="Cycle to next landscape background"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </>
-        )}
+          {backgroundSettings.enabled && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                cycleNextBackground();
+              }}
+              className="h-8 w-8 shrink-0 rounded-lg bg-stone-950/85 hover:bg-stone-900 text-stone-400 hover:text-emerald-300 border border-stone-800 hover:border-emerald-500/50 shadow-md backdrop-blur-md inline-flex items-center justify-center transition-all active:scale-95"
+              title="Cycle to next landscape background"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Field Plot Grid Specification Pill */}
-      <div className="absolute top-2.5 right-3 z-20 text-[10px] text-stone-400 font-mono pointer-events-none bg-stone-900/80 backdrop-blur-md px-2 py-1 rounded-md border border-stone-800 flex items-center gap-1.5">
-        <span className={`w-1.5 h-1.5 rounded-full ${soilXRayMode ? 'bg-purple-400 animate-ping' : 'bg-emerald-400'}`}></span>
-        <span>{soilXRayMode ? 'SUBTERRANEAN BIOME 6×6' : 'FIELD SECTOR 6×6'}</span>
+      {/* Top Right Canvas HUD: Sector Indicator & Fullscreen Button */}
+      <div className="absolute top-2.5 right-3 z-20 flex items-center gap-1.5">
+        <div className="h-8 text-[10px] text-stone-300 font-mono pointer-events-none bg-stone-950/85 backdrop-blur-md px-2.5 rounded-lg border border-stone-800/90 shadow-md flex items-center gap-2">
+          <span className={`w-1.5 h-1.5 rounded-full ${soilXRayMode ? 'bg-purple-400 animate-ping' : 'bg-emerald-400'}`} />
+          <span>{soilXRayMode ? 'SUBTERRANEAN BIOME 6×6' : 'FIELD SECTOR 6×6'}</span>
+        </div>
+
+        <button
+          onClick={toggleFullscreen}
+          className="h-8 px-2.5 rounded-lg bg-stone-950/85 hover:bg-stone-900 text-stone-300 hover:text-white border border-stone-800 hover:border-stone-750 shadow-md backdrop-blur-md inline-flex items-center gap-1.5 text-xs font-semibold transition-all active:scale-95 group"
+          title={isFullscreen ? 'Exit Fullscreen (Hotkey: F)' : 'Fullscreen View (Hotkey: F)'}
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Exit Full</span>
+            </>
+          ) : (
+            <>
+              <Maximize2 className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+              <span className="hidden sm:inline">Fullscreen</span>
+            </>
+          )}
+          <kbd className="hidden md:inline-block text-[9px] font-mono px-1 py-0.2 bg-stone-900 rounded text-stone-400 border border-stone-700">F</kbd>
+        </button>
       </div>
 
       {/* SUBTERRANEAN X-RAY BIOLOGICAL HUD LEGEND */}
