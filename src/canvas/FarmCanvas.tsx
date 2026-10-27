@@ -1265,6 +1265,28 @@ export const FarmCanvas: React.FC = () => {
   const activeBgImg = getActiveBackgroundImage(backgroundSettings, farm.season);
   const currentPreset = BACKGROUND_PRESETS.find(p => p.id === backgroundSettings.selectedPresetId);
 
+  // Quick metric values for guaranteed fullscreen HUD display
+  const totalTiles = farm.tiles.length || 1;
+  const avgSOM = farm.tiles.reduce((acc, t) => acc + t.soilOrganicMatter, 0) / totalTiles;
+  const avgBeneficials = farm.tiles.reduce((acc, t) => acc + t.beneficialInsects, 0) / totalTiles;
+  const avgPests = farm.tiles.reduce((acc, t) => acc + t.pestPressure, 0) / totalTiles;
+  const avgCompaction = farm.tiles.reduce((acc, t) => acc + t.compaction, 0) / totalTiles;
+  const avgSalinity = farm.tiles.reduce((acc, t) => acc + t.salinity, 0) / totalTiles;
+  const avgMoisture = farm.tiles.reduce((acc, t) => acc + t.moisture, 0) / totalTiles;
+
+  const currentSoilHealth = Math.min(100, Math.max(0, Math.round(
+    (avgSOM * 0.45) + ((100 - avgCompaction) * 0.25) + ((100 - avgSalinity) * 0.15) + (avgBeneficials * 0.15)
+  )));
+
+  const currentWaterIndex = Math.min(100, Math.max(0, Math.round(
+    ((30 - farm.groundwaterDepth) / 25 * 50) + (avgMoisture * 0.5)
+  )));
+
+  const currentBioIndex = Math.min(100, Math.max(0, Math.round(
+    (avgBeneficials * 0.5) + ((100 - avgPests) * 0.3) + 
+    ((farm.tiles.reduce((acc, t) => acc + t.earthwormPopulation, 0) / totalTiles) * 0.2)
+  )));
+
   return (
     <div 
       ref={containerRef} 
@@ -1313,9 +1335,35 @@ export const FarmCanvas: React.FC = () => {
         }}
       />
 
+      {/* Fullscreen Floating KPI HUD: Cash, Soil Health, Water Index, Biodiversity */}
+      {isFullscreen && (
+        <div className="absolute top-2.5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 bg-stone-950/90 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-stone-800 shadow-2xl">
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-300 pr-2 border-r border-stone-800" title="Cash Balance">
+            <span className="text-emerald-400">💵</span>
+            <span>${farm.cashBalance.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-amber-300 pr-2 border-r border-stone-800" title="Soil Health Index">
+            <span className="text-amber-400">🌱</span>
+            <span>{currentSoilHealth}<span className="text-[10px] text-stone-500 font-normal">/100</span></span>
+          </div>
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-sky-300 pr-2 border-r border-stone-800" title={`Water Table Index (${farm.groundwaterDepth.toFixed(1)}m aquifer depth)`}>
+            <span className="text-sky-400">💧</span>
+            <span>{currentWaterIndex}<span className="text-[10px] text-stone-500 font-normal">/100</span></span>
+          </div>
+          <div 
+            onClick={() => openModal('eco_impact')}
+            className="flex items-center gap-1.5 text-xs font-mono font-bold text-purple-300 hover:text-purple-200 cursor-pointer transition-colors" 
+            title="Biodiversity Index (Click to open Ecological Impact)"
+          >
+            <span className="text-purple-400">🦋</span>
+            <span>{currentBioIndex}<span className="text-[10px] text-stone-500 font-normal">/100</span></span>
+          </div>
+        </div>
+      )}
+
       {/* Floating active weather banner */}
       {farm.activeWeatherEvent && !soilXRayMode && (
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-amber-500/90 text-stone-950 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg flex items-center gap-2 backdrop-blur-md pointer-events-none ring-1 ring-amber-400/50 animate-pulse">
+        <div className={`absolute ${isFullscreen ? 'top-12' : 'top-3'} left-1/2 -translate-x-1/2 z-20 bg-amber-500/90 text-stone-950 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg flex items-center gap-2 backdrop-blur-md pointer-events-none ring-1 ring-amber-400/50 animate-pulse`}>
           <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
           <span>⚠️ {farm.activeWeatherEvent.description}</span>
           <span className="bg-stone-950/20 px-1.5 py-0.5 rounded font-mono text-[10px]">

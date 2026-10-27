@@ -253,10 +253,14 @@ export const Dashboard: React.FC = () => {
   };
 
   return (
-    <header className="w-full bg-stone-900/90 backdrop-blur-md border-b border-stone-800/90 text-stone-100 px-3.5 sm:px-5 py-2.5 shadow-xl sticky top-0 z-30">
-      <div className="max-w-7xl 2xl:max-w-[1680px] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
-        {/* Left Side: Consolidated Modules Menu Button at Left Corner, Brand, Calendar & Weather */}
-        <div className="flex items-center justify-between w-full lg:w-auto gap-3">
+    <header className="w-full bg-stone-900/95 backdrop-blur-md border-b border-stone-800/90 text-stone-100 px-3 sm:px-4 py-2 shadow-xl sticky top-0 z-30">
+      <div className={`mx-auto flex flex-col gap-2 transition-all ${
+        isFullscreen ? 'max-w-[98vw] 2xl:max-w-[1850px]' : 'max-w-7xl 2xl:max-w-[1680px]'
+      }`}>
+        {/* Top Tier: Left (Navigation & Calendar/Weather) and Right (Time controls, Tools & Modules) */}
+        <div className="flex items-center justify-between gap-2.5 flex-wrap w-full">
+          {/* Left Side: Consolidated Modules Menu Button at Left Corner, Brand, Calendar & Weather */}
+          <div className="flex items-center justify-between w-full lg:w-auto gap-2.5 flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-2.5">
             {/* Top-Left Consolidated Modules Menu Button */}
             <div className="relative" ref={menuRef}>
@@ -945,54 +949,8 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Center: Dynamic Metric Sparklines (The True Health Feedback) */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full lg:w-auto">
-          {/* 1. Cash Balance */}
-          <div className="bg-stone-950/80 border border-stone-800/90 hover:border-emerald-500/40 transition-colors rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2.5 shadow-sm">
-            <div>
-              <div className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider">{t.cash}</div>
-              <div className="text-sm font-bold font-mono text-emerald-300">${farm.cashBalance.toLocaleString()}</div>
-            </div>
-            <Sparkline data={cashHistory} color="#10b981" gradientId="spark-cash" />
-          </div>
-
-          {/* 2. Soil Health Index */}
-          <div className="bg-stone-950/80 border border-stone-800/90 hover:border-amber-500/40 transition-colors rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2.5 shadow-sm">
-            <div>
-              <div className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider">{t.soilHealth}</div>
-              <div className="text-sm font-bold font-mono text-amber-300">{currentSoilHealth}<span className="text-[10px] text-stone-500 font-normal">/100</span></div>
-            </div>
-            <Sparkline data={soilHistory} color="#f59e0b" gradientId="spark-soil" />
-          </div>
-
-          {/* 3. Water Table Index */}
-          <div className="bg-stone-950/80 border border-stone-800/90 hover:border-sky-500/40 transition-colors rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2.5 shadow-sm">
-            <div>
-              <div className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider">Water Index</div>
-              <div className="text-sm font-bold font-mono text-sky-300">{currentWaterIndex}<span className="text-[10px] text-stone-500 font-normal">/100</span></div>
-            </div>
-            <Sparkline data={waterHistory} color="#38bdf8" gradientId="spark-water" />
-          </div>
-
-          {/* 4. Biodiversity Index */}
-          <div 
-            onClick={() => openModal('eco_impact')}
-            className="bg-stone-950/80 border border-stone-800/90 hover:border-purple-500/60 hover:bg-stone-900 transition-all rounded-xl px-2.5 py-1.5 flex items-center justify-between gap-2.5 shadow-sm cursor-pointer group"
-            title="Click to open Ecological Impact Dashboard & Biodiversity Breakdown"
-          >
-            <div>
-              <div className="text-[10px] text-stone-400 group-hover:text-purple-300 font-semibold uppercase tracking-wider flex items-center gap-1">
-                {t.biodiversity}
-                <Sparkles className="w-2.5 h-2.5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </div>
-              <div className="text-sm font-bold font-mono text-purple-300">{currentBioIndex}<span className="text-[10px] text-stone-500 font-normal">/100</span></div>
-            </div>
-            <Sparkline data={bioHistory} color="#c084fc" gradientId="spark-bio" />
-          </div>
-        </div>
-
         {/* Right Side: Simulation Time & Speed Controls, Feature Buttons, Audio, Fullscreen & Language */}
-        <div className="flex items-center gap-1.5 w-full lg:w-auto justify-end flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-1.5 w-full lg:w-auto justify-end flex-wrap sm:flex-nowrap shrink-0">
           {/* Time & Speed Controls */}
           <div className="h-8 flex items-center gap-0.5 bg-stone-950/90 px-1 rounded-lg border border-stone-800 shadow-inner">
             <button
@@ -1226,6 +1184,63 @@ export const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Persistent Full-Width KPI Status Bar: Cash, Soil Health, Water Index, Biodiversity (Always fully visible in windowed & fullscreen) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 w-full">
+        {/* 1. Cash Balance */}
+        <div className="bg-stone-950/85 border border-stone-800/90 hover:border-emerald-500/50 transition-colors rounded-xl px-3 py-1.5 flex items-center justify-between gap-2.5 shadow-sm min-w-0">
+          <div className="min-w-0">
+            <div className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider truncate flex items-center gap-1">
+              <span>💵</span>
+              <span>{t.cash}</span>
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-emerald-300 truncate">${farm.cashBalance.toLocaleString()}</div>
+          </div>
+          <Sparkline data={cashHistory} color="#10b981" gradientId="spark-cash" />
+        </div>
+
+        {/* 2. Soil Health Index */}
+        <div className="bg-stone-950/85 border border-stone-800/90 hover:border-amber-500/50 transition-colors rounded-xl px-3 py-1.5 flex items-center justify-between gap-2.5 shadow-sm min-w-0">
+          <div className="min-w-0">
+            <div className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider truncate flex items-center gap-1">
+              <span>🌱</span>
+              <span>{t.soilHealth}</span>
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-amber-300 truncate">{currentSoilHealth}<span className="text-[10px] text-stone-500 font-normal">/100</span></div>
+          </div>
+          <Sparkline data={soilHistory} color="#f59e0b" gradientId="spark-soil" />
+        </div>
+
+        {/* 3. Water Table Index */}
+        <div className="bg-stone-950/85 border border-stone-800/90 hover:border-sky-500/50 transition-colors rounded-xl px-3 py-1.5 flex items-center justify-between gap-2.5 shadow-sm min-w-0">
+          <div className="min-w-0">
+            <div className="text-[10px] text-stone-400 font-semibold uppercase tracking-wider truncate flex items-center gap-1">
+              <span>💧</span>
+              <span>Water Index</span>
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-sky-300 truncate">{currentWaterIndex}<span className="text-[10px] text-stone-500 font-normal">/100</span></div>
+          </div>
+          <Sparkline data={waterHistory} color="#38bdf8" gradientId="spark-water" />
+        </div>
+
+        {/* 4. Biodiversity Index */}
+        <div 
+          onClick={() => openModal('eco_impact')}
+          className="bg-stone-950/85 border border-stone-800/90 hover:border-purple-500/60 hover:bg-stone-900 transition-all rounded-xl px-3 py-1.5 flex items-center justify-between gap-2.5 shadow-sm cursor-pointer group min-w-0"
+          title="Click to open Ecological Impact Dashboard & Biodiversity Breakdown"
+        >
+          <div className="min-w-0">
+            <div className="text-[10px] text-stone-400 group-hover:text-purple-300 font-semibold uppercase tracking-wider flex items-center gap-1 truncate">
+              <span>🦋</span>
+              <span>{t.biodiversity}</span>
+              <Sparkles className="w-2.5 h-2.5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-purple-300 truncate">{currentBioIndex}<span className="text-[10px] text-stone-500 font-normal">/100</span></div>
+          </div>
+          <Sparkline data={bioHistory} color="#c084fc" gradientId="spark-bio" />
+        </div>
+      </div>
+    </div>
 
       {/* Expandable 12-Season Recharts Long-Term Trends Chart */}
       {showTrendsChart && (
