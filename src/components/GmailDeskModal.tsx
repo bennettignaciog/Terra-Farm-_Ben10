@@ -131,7 +131,7 @@ export const GmailDeskModal: React.FC = () => {
   const handleLogin = async () => {
     try {
       setIsLoggingIn(true);
-      const result = await googleSignIn();
+      const result = await googleSignIn(true);
       if (result) {
         setUser(result.user);
         setToken(result.accessToken);

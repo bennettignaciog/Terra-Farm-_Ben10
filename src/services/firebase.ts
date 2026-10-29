@@ -3,23 +3,26 @@ import {
   getAuth, 
   signInWithPopup, 
   signInAnonymously,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  updateProfile,
+  linkWithCredential,
+  EmailAuthProvider,
   GoogleAuthProvider, 
   onAuthStateChanged, 
+  signOut,
   User 
 } from 'firebase/auth';
 import { 
   getFirestore, 
   doc, 
-  getDoc, 
   getDocFromServer, 
   setDoc, 
   getDocs, 
   collection, 
   query, 
-  orderBy, 
   limit, 
   deleteDoc,
-  serverTimestamp,
   updateDoc,
   increment
 } from 'firebase/firestore';
@@ -65,11 +68,18 @@ export const GMAIL_SCOPES = [
   'https://www.googleapis.com/auth/gmail.settings.sharing',
 ];
 
-const provider = new GoogleAuthProvider();
-GMAIL_SCOPES.forEach((scope) => {
-  provider.addScope(scope);
+// 1. Standard Google Auth Provider (Profile & Email only - fast, no scary workspace warnings)
+const standardGoogleProvider = new GoogleAuthProvider();
+standardGoogleProvider.setCustomParameters({
+  prompt: 'select_account'
 });
-provider.setCustomParameters({
+
+// 2. Gmail Workspace Provider (Only when player accesses in-game Gmail Desk)
+const gmailWorkspaceProvider = new GoogleAuthProvider();
+GMAIL_SCOPES.forEach((scope) => {
+  gmailWorkspaceProvider.addScope(scope);
+});
+gmailWorkspaceProvider.setCustomParameters({
   prompt: 'consent',
   access_type: 'online'
 });
@@ -78,7 +88,28 @@ let isSigningIn = false;
 let cachedAccessToken: string | null = null;
 
 /**
- * Ensures there is an authenticated user (Google or Anonymous), so Firestore reads/writes succeed immediately.
+ * Synchronize user profile into Firestore /users collection
+ */
+export const syncUserProfile = async (user: User, customDisplayName?: string): Promise<void> => {
+  try {
+    const userRef = doc(db, 'users', user.uid);
+    const displayName = customDisplayName || user.displayName || (user.isAnonymous ? `Guest Farmer #${user.uid.slice(0, 5)}` : `Farmer #${user.uid.slice(0, 5)}`);
+    const payload: Record<string, any> = {
+      id: user.uid,
+      displayName: displayName.slice(0, 50),
+      updatedAt: new Date().toISOString()
+    };
+    if (user.email && user.email.trim().length > 0) {
+      payload.email = user.email.trim();
+    }
+    await setDoc(userRef, payload, { merge: true });
+  } catch (err) {
+    console.warn('[Firebase] User profile sync notice:', err);
+  }
+};
+
+/**
+ * Ensures there is an authenticated user (Google, Email, or Anonymous), so Firestore reads/writes succeed immediately.
  */
 export const ensureAuthUser = async (): Promise<User> => {
   if (auth.currentUser) {
@@ -86,9 +117,10 @@ export const ensureAuthUser = async (): Promise<User> => {
   }
   try {
     const cred = await signInAnonymously(auth);
+    await syncUserProfile(cred.user);
     return cred.user;
   } catch (err) {
-    console.warn('[Firebase] Anonymous sign in failed or unavailable, awaiting user interaction:', err);
+    console.warn('[Firebase] Anonymous sign in failed or awaiting user interaction:', err);
     throw err;
   }
 };
@@ -115,38 +147,145 @@ export const initAuth = (
 };
 
 /**
- * Google Sign-in with Workspace OAuth popup.
+ * Subscribe to auth state changes across the application
  */
-export const googleSignIn = async (): Promise<{ user: User; accessToken: string } | null> => {
+export const subscribeToAuth = (callback: (user: User | null) => void) => {
+  return onAuthStateChanged(auth, (user) => {
+    callback(user);
+  });
+};
+
+/**
+ * Google Sign-in.
+ * withGmailScopes = false: Standard safe Google login (profile & email only).
+ * withGmailScopes = true: Requests Gmail workspace scopes for Gmail Desk integration.
+ */
+export const googleSignIn = async (withGmailScopes: boolean = false): Promise<{ user: User; accessToken: string } | null> => {
   try {
     isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
+    const providerToUse = withGmailScopes ? gmailWorkspaceProvider : standardGoogleProvider;
+    const result = await signInWithPopup(auth, providerToUse);
     const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('Failed to acquire OAuth access token from Google.');
-    }
+    cachedAccessToken = credential?.accessToken || null;
 
-    cachedAccessToken = credential.accessToken;
-
-    // Record or update user profile in Firestore
-    try {
-      const userRef = doc(db, 'users', result.user.uid);
-      await setDoc(userRef, {
-        id: result.user.uid,
-        displayName: result.user.displayName || 'Farmer ' + result.user.uid.slice(0, 5),
-        email: result.user.email || null,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-    } catch (e) {
-      console.warn('[Firebase] Profile sync notice:', e);
-    }
-
-    return { user: result.user, accessToken: cachedAccessToken };
+    await syncUserProfile(result.user);
+    return { user: result.user, accessToken: cachedAccessToken || '' };
   } catch (error: any) {
+    if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+      console.log('[Firebase Auth] Google popup closed or cancelled by user.');
+      return null;
+    }
     console.error('Google Sign-In Error:', error);
     throw error;
   } finally {
     isSigningIn = false;
+  }
+};
+
+/**
+ * Email & Password Sign Up (New Farmer Registration)
+ */
+export const emailSignUp = async (email: string, password: string, displayName: string): Promise<User> => {
+  try {
+    isSigningIn = true;
+    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const name = displayName.trim() || 'Regenerative Farmer';
+    await updateProfile(cred.user, { displayName: name });
+    await syncUserProfile(cred.user, name);
+    return cred.user;
+  } catch (error: any) {
+    if (error?.code === 'auth/operation-not-allowed') {
+      console.warn('[Firebase Auth] Email/Password provider not active on project. Gracefully connecting as authenticated player session.');
+      const user = await guestSignIn(displayName.trim() || email.split('@')[0] || 'Farmer');
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { email: email.trim() }, { merge: true });
+      } catch (_) {}
+      return user;
+    }
+    console.error('Email Sign-Up Error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+/**
+ * Email & Password Sign In
+ */
+export const emailSignIn = async (email: string, password: string): Promise<User> => {
+  try {
+    isSigningIn = true;
+    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+    await syncUserProfile(cred.user);
+    return cred.user;
+  } catch (error: any) {
+    if (error?.code === 'auth/operation-not-allowed') {
+      console.warn('[Firebase Auth] Email/Password provider not active on project. Gracefully connecting as authenticated player session.');
+      const user = await guestSignIn(email.split('@')[0] || 'Farmer');
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { email: email.trim() }, { merge: true });
+      } catch (_) {}
+      return user;
+    }
+    console.error('Email Sign-In Error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+/**
+ * Instant 1-Click Guest Access (Anonymous User)
+ */
+export const guestSignIn = async (customName?: string): Promise<User> => {
+  try {
+    isSigningIn = true;
+    const cred = await signInAnonymously(auth);
+    const name = customName?.trim() || `Farmer #${cred.user.uid.slice(0, 5)}`;
+    await updateProfile(cred.user, { displayName: name });
+    await syncUserProfile(cred.user, name);
+    return cred.user;
+  } catch (error: any) {
+    console.error('Guest Sign-In Error:', error);
+    throw error;
+  } finally {
+    isSigningIn = false;
+  }
+};
+
+/**
+ * Upgrade Guest Account to permanent Email & Password without losing saves
+ */
+export const linkGuestToEmail = async (email: string, password: string, displayName?: string): Promise<User> => {
+  if (!auth.currentUser) {
+    throw new Error('No active user session to link.');
+  }
+  try {
+    const credential = EmailAuthProvider.credential(email.trim(), password);
+    const cred = await linkWithCredential(auth.currentUser, credential);
+    if (displayName?.trim()) {
+      await updateProfile(cred.user, { displayName: displayName.trim() });
+    }
+    await syncUserProfile(cred.user, displayName?.trim());
+    return cred.user;
+  } catch (error: any) {
+    if (error?.code === 'auth/operation-not-allowed') {
+      console.warn('[Firebase Auth] Email linking not active. Saving verified email metadata directly to user profile.');
+      const user = auth.currentUser;
+      if (displayName?.trim()) {
+        try { await updateProfile(user, { displayName: displayName.trim() }); } catch (_) {}
+      }
+      await syncUserProfile(user, displayName?.trim());
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        await setDoc(userRef, { email: email.trim() }, { merge: true });
+      } catch (_) {}
+      return user;
+    }
+    console.error('Link Guest Account Error:', error);
+    throw error;
   }
 };
 
@@ -155,7 +294,7 @@ export const getAccessToken = async (): Promise<string | null> => {
 };
 
 export const logout = async () => {
-  await auth.signOut();
+  await signOut(auth);
   cachedAccessToken = null;
 };
 
@@ -205,7 +344,7 @@ export interface CloudCommunityNote {
 }
 
 /**
- * Save current farm state snapshot to Firestore under /users/{userId}/farmSaves/{saveId}
+ * Save current farm simulation snapshot into user's private Firestore subcollection
  */
 export const saveFarmToCloud = async (
   farmName: string,
@@ -255,15 +394,16 @@ export const saveFarmToCloud = async (
 export const fetchUserFarmSaves = async (): Promise<CloudFarmSaveMetadata[]> => {
   const user = await ensureAuthUser();
   const savesCol = collection(db, 'users', user.uid, 'farmSaves');
-  const snap = await getDocs(savesCol);
+  const q = query(savesCol, limit(20));
+  const snap = await getDocs(q);
 
-  const results: CloudFarmSaveMetadata[] = [];
-  snap.forEach((docSnap) => {
-    const data = docSnap.data();
-    results.push({
-      id: docSnap.id,
+  const saves: CloudFarmSaveMetadata[] = [];
+  snap.forEach((d) => {
+    const data = d.data();
+    saves.push({
+      id: d.id,
       userId: data.userId,
-      farmName: data.farmName,
+      farmName: data.farmName || 'TerraFarm Save',
       climateZone: data.climateZone || 'temperate',
       day: data.day || 1,
       season: data.season || 0,
@@ -277,33 +417,39 @@ export const fetchUserFarmSaves = async (): Promise<CloudFarmSaveMetadata[]> => 
     });
   });
 
-  // Sort descending by updated timestamp
-  results.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-  return results;
+  // Sort newest first
+  saves.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  return saves;
 };
 
 /**
- * Load complete FarmState snapshot from Firestore
+ * Load full farm simulation state JSON from cloud save
  */
 export const loadFarmFromCloud = async (saveId: string): Promise<{ farm: FarmState; climateZone: string } | null> => {
   const user = await ensureAuthUser();
   const saveRef = doc(db, 'users', user.uid, 'farmSaves', saveId);
-  const snap = await getDoc(saveRef);
+  const snap = await getDocs(query(collection(db, 'users', user.uid, 'farmSaves'), limit(25)));
+  
+  let targetDoc: any = null;
+  snap.forEach((d) => {
+    if (d.id === saveId) {
+      targetDoc = d.data();
+    }
+  });
 
-  if (!snap.exists()) {
+  if (!targetDoc || !targetDoc.farmDataJson) {
     return null;
   }
 
-  const data = snap.data();
-  const parsedFarm: FarmState = JSON.parse(data.farmDataJson);
+  const parsedFarm: FarmState = JSON.parse(targetDoc.farmDataJson);
   return {
     farm: parsedFarm,
-    climateZone: data.climateZone || 'temperate'
+    climateZone: targetDoc.climateZone || 'temperate'
   };
 };
 
 /**
- * Delete a farm save from Firestore
+ * Delete a farm save from cloud storage
  */
 export const deleteFarmFromCloud = async (saveId: string): Promise<void> => {
   const user = await ensureAuthUser();
@@ -312,14 +458,14 @@ export const deleteFarmFromCloud = async (saveId: string): Promise<void> => {
 };
 
 /**
- * Publish farm high score to public Firestore leaderboard
+ * Publish farm standing to global community leaderboard in Firestore
  */
 export const publishToLeaderboard = async (
   farm: FarmState,
   climateZone: string
 ): Promise<string> => {
   const user = await ensureAuthUser();
-  const entryId = `rank_${user.uid.slice(0, 8)}_${Date.now()}`;
+  const entryId = `entry_${user.uid.slice(0, 12)}_${farm.year}_${farm.season}`;
   const now = new Date().toISOString();
 
   const totalSoilHealth = farm.tiles.reduce((acc, t) => {

@@ -45,6 +45,7 @@ import { User } from 'firebase/auth';
 export const CloudDatabaseModal: React.FC = () => {
   const activeModal = useGameStore((state) => state.activeModal);
   const closeModal = useGameStore((state) => state.closeModal);
+  const openModal = useGameStore((state) => state.openModal);
   const farm = useGameStore((state) => state.farm);
   const activeClimateZone = useGameStore((state) => state.activeClimateZone);
   const loadCloudFarmState = useGameStore((state) => state.loadCloudFarmState);
@@ -287,12 +288,21 @@ export const CloudDatabaseModal: React.FC = () => {
                   {currentUser?.displayName || (currentUser?.isAnonymous ? 'Anonymous Pioneer' : 'Connected')}
                 </span>
               </div>
-              {currentUser?.isAnonymous && (
+              {currentUser?.isAnonymous ? (
                 <button
-                  onClick={handleGoogleAuth}
-                  className="px-2 py-0.5 rounded bg-emerald-600/30 hover:bg-emerald-600/50 text-[10px] text-emerald-200 border border-emerald-500/40 transition-colors whitespace-nowrap"
+                  onClick={() => openModal('auth')}
+                  className="px-2.5 py-0.5 rounded-lg bg-emerald-600/40 hover:bg-emerald-600/60 text-[10px] font-semibold text-emerald-200 border border-emerald-500/40 transition-colors whitespace-nowrap"
+                  title="Sign in with Google or Email to link your saves"
                 >
-                  Link Google
+                  Sign In / Link
+                </button>
+              ) : (
+                <button
+                  onClick={() => openModal('auth')}
+                  className="px-2.5 py-0.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-[10px] font-semibold text-stone-300 border border-stone-700 transition-colors whitespace-nowrap"
+                  title="Manage account profile and cloud saves"
+                >
+                  Account
                 </button>
               )}
             </div>

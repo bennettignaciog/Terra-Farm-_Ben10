@@ -40,7 +40,9 @@ import {
   Image as ImageIcon,
   Maximize2,
   Minimize2,
-  Database
+  Database,
+  User as UserIcon,
+  Cloud
 } from 'lucide-react';
 
 const LANGUAGE_OPTIONS: { code: Language; label: string; native: string; flag: string }[] = [
@@ -132,6 +134,20 @@ export const Dashboard: React.FC = () => {
   const openModal = useGameStore((state) => state.openModal);
   const activeClimateZone = useGameStore((state) => state.activeClimateZone);
   const backgroundSettings = useGameStore((state) => state.backgroundSettings);
+  const currentUser = useGameStore((state) => state.currentUser);
+  const saveCurrentProgress = useGameStore((state) => state.saveCurrentProgress);
+  const lastSavedAt = useGameStore((state) => state.lastSavedAt);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleQuickSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveCurrentProgress();
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const [showTrendsChart, setShowTrendsChart] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
@@ -882,6 +898,53 @@ export const Dashboard: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Farmer Sign In / Account Pill */}
+            {currentUser ? (
+              <button
+                onClick={() => openModal('auth')}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-stone-950/90 border border-emerald-500/50 hover:border-emerald-400 text-stone-200 hover:text-white transition-all shadow-sm active:scale-95 group"
+                title={`Signed in as ${currentUser.displayName || currentUser.email || 'Farmer'} (Click to manage account & cloud saves)`}
+              >
+                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[10px] font-bold text-white shrink-0 shadow-inner">
+                  {currentUser.photoURL ? (
+                    <img src={currentUser.photoURL} alt="" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    currentUser.displayName?.charAt(0).toUpperCase() || 'F'
+                  )}
+                </div>
+                <span className="font-semibold text-xs text-stone-200 group-hover:text-emerald-300 max-w-[85px] truncate hidden sm:inline">
+                  {currentUser.displayName?.split(' ')[0] || (currentUser.isAnonymous ? 'Guest' : 'Account')}
+                </span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              </button>
+            ) : (
+              <button
+                onClick={() => openModal('auth')}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-950/60 border border-emerald-400/60 transition-all active:scale-95 group"
+                title="Sign in with Google, Email, or Play as Guest to save your farm progress"
+              >
+                <UserIcon className="w-3.5 h-3.5 text-white group-hover:scale-110 transition-transform" />
+                <span className="tracking-wide">Sign In</span>
+              </button>
+            )}
+
+            {/* Quick Save Progress Button */}
+            <button
+              onClick={handleQuickSave}
+              disabled={isSaving}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all shadow-sm active:scale-95 text-xs font-semibold ${
+                isSaving
+                  ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
+                  : 'bg-stone-950/90 hover:bg-stone-850 border-stone-750 hover:border-emerald-500 text-stone-200 hover:text-white'
+              }`}
+              title={lastSavedAt ? `Saved to cloud at ${new Date(lastSavedAt).toLocaleTimeString()} (Click to save now)` : "Save farm progress to Cloud"}
+            >
+              <Cloud className={`w-3.5 h-3.5 text-emerald-400 ${isSaving ? 'animate-bounce' : ''}`} />
+              <span className="font-mono text-xs font-bold text-emerald-300 hidden sm:inline">
+                {isSaving ? 'Saving...' : 'Save'}
+              </span>
+            </button>
 
             {/* Quick Access Cloud Database Button */}
             <button

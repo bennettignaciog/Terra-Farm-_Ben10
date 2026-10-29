@@ -19,6 +19,8 @@ import { GameGuideModal } from './components/GameGuideModal';
 import { BackgroundOptionsModal } from './components/BackgroundOptionsModal';
 import { AgroQuizModal } from './components/AgroQuizModal';
 import { CloudDatabaseModal } from './components/CloudDatabaseModal';
+import { AuthModal } from './components/AuthModal';
+import { subscribeToAuth } from './services/firebase';
 import { getActiveBackgroundImage } from './config/backgroundPresets';
 import { CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
@@ -29,6 +31,26 @@ export default function App() {
   const notification = useGameStore((state) => state.notification);
   const backgroundSettings = useGameStore((state) => state.backgroundSettings);
   const farmSeason = useGameStore((state) => state.farm.season);
+  const dayOfSeason = useGameStore((state) => state.farm.dayOfSeason);
+  const setCurrentUser = useGameStore((state) => state.setCurrentUser);
+  const currentUser = useGameStore((state) => state.currentUser);
+  const isAutoSaveEnabled = useGameStore((state) => state.isAutoSaveEnabled);
+  const saveCurrentProgress = useGameStore((state) => state.saveCurrentProgress);
+
+  // Live Firebase Auth State Sync
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth((user) => {
+      setCurrentUser(user);
+    });
+    return () => unsubscribe();
+  }, [setCurrentUser]);
+
+  // Automatic Cloud Save at Season Boundary (Day 90 transition)
+  useEffect(() => {
+    if (dayOfSeason === 90 && isAutoSaveEnabled && currentUser) {
+      saveCurrentProgress();
+    }
+  }, [dayOfSeason, isAutoSaveEnabled, currentUser, saveCurrentProgress]);
 
   // Core Simulation Heartbeat Loop:
   // Base interval: 1 day = 2000ms at 1x speed.
@@ -92,6 +114,7 @@ export default function App() {
       <BackgroundOptionsModal />
       <AgroQuizModal />
       <CloudDatabaseModal />
+      <AuthModal />
 
       {/* Global Ambient App Wallpaper */}
       {backgroundSettings.enabled && backgroundSettings.applyToApp && (

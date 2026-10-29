@@ -31,8 +31,10 @@ import {
   QuizQuestion, 
   QuizStreakReward 
 } from '../config/quizzes';
+import { User } from 'firebase/auth';
+import { saveFarmToCloud } from '../services/firebase';
 
-export type ModalType = null | 'report' | 'upgrades' | 'neighbors' | 'contracts' | 'zones' | 'gmail' | 'academy' | 'eco_impact' | 'climate' | 'field_notes' | 'leaderboard' | 'guide' | 'background' | 'quiz' | 'database';
+export type ModalType = null | 'report' | 'upgrades' | 'neighbors' | 'contracts' | 'zones' | 'gmail' | 'academy' | 'eco_impact' | 'climate' | 'field_notes' | 'leaderboard' | 'guide' | 'background' | 'quiz' | 'database' | 'auth';
 
 export interface HarvestLootEvent {
   id: string;
@@ -102,6 +104,15 @@ interface GameStore {
   resetQuizProgress: () => void;
   claimStreakReward: (streak: number) => boolean;
   loadCloudFarmState: (farm: FarmState, climateZone?: string) => void;
+
+  // User Authentication & Cloud Saves
+  currentUser: User | null;
+  isAutoSaveEnabled: boolean;
+  lastSavedAt: string | null;
+  setCurrentUser: (user: User | null) => void;
+  setIsAutoSaveEnabled: (enabled: boolean) => void;
+  setLastSavedAt: (timestamp: string | null) => void;
+  saveCurrentProgress: () => Promise<string | null>;
 }
 
 const STORAGE_KEY = 'terrafarm_save_v1';
@@ -791,5 +802,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       console.error(e);
     }
     get().showNotification('Farm restored from Cloud Database!', 'success');
+  },
+
+  currentUser: null,
+  isAutoSaveEnabled: true,
+  lastSavedAt: null,
+  setCurrentUser: (user) => set({ currentUser: user }),
+  setIsAutoSaveEnabled: (enabled) => set({ isAutoSaveEnabled: enabled }),
+  setLastSavedAt: (timestamp) => set({ lastSavedAt: timestamp }),
+  saveCurrentProgress: async () => {
+    const { farm, activeClimateZone, showNotification } = get();
+    try {
+      const saveId = await saveFarmToCloud(farm.farmName || 'TerraFarm', farm, activeClimateZone);
+      const now = new Date().toISOString();
+      set({ lastSavedAt: now });
+      showNotification('Farm progress saved to Cloud! ☁️', 'success');
+      return saveId;
+    } catch (err: any) {
+      console.error('Save progress error:', err);
+      showNotification('Failed to save: ' + (err?.message || 'Check connection'), 'warning');
+      return null;
+    }
   }
 }));
